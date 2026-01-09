@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient';
 
 export const appointmentService = {
-  // Lista todos os agendamentos
+  // 1. Buscar todos (Para o Médico)
   getAll: async () => {
     try {
       const { data, error } = await supabase
@@ -13,11 +13,11 @@ export const appointmentService = {
       return data || [];
     } catch (error) {
       console.error('Erro ao buscar:', error);
-      return []; // Retorna array vazio para não quebrar a tela
+      return [];
     }
   },
 
-  // Lista por Paciente
+  // 2. Buscar por Paciente (Para o Histórico)
   getByPatientId: async (patientId) => {
     try {
       const { data, error } = await supabase
@@ -29,12 +29,12 @@ export const appointmentService = {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('Erro ao buscar por paciente:', error);
+      console.error('Erro user:', error);
       return [];
     }
   },
 
-  // Criação
+  // 3. Criar Agendamento
   create: async (appointment) => {
     try {
       const { data, error } = await supabase
@@ -50,7 +50,7 @@ export const appointmentService = {
     }
   },
 
-  // Atualização de Status
+  // 4. Atualizar Status (Aceitar, Recusar, Cancelar)
   updateStatus: async (id, newStatus) => {
     try {
       const { data, error } = await supabase
