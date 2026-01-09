@@ -18,11 +18,12 @@ export default function MyAppointments() {
     loadData();
   }, [user]);
 
+  // AÇÃO DE CANCELAR DO PACIENTE
   const handleCancel = async (id) => {
-    if(!window.confirm("Tem certeza que deseja cancelar?")) return;
+    if(!window.confirm("Tem certeza que deseja cancelar? Essa ação libera o horário.")) return;
     setIsLoading(true);
     await appointmentService.updateStatus(id, 'cancelled');
-    loadData();
+    loadData(); // Atualiza a tela
     setIsLoading(false);
   };
 
@@ -45,7 +46,7 @@ export default function MyAppointments() {
           <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400">
             <Calendar size={32} />
           </div>
-          <p className="text-slate-500 font-medium">Você ainda não tem agendamentos.</p>
+          <p className="text-slate-500 font-medium">Histórico vazio.</p>
         </div>
       ) : (
         appointments.map((apt) => (
@@ -54,8 +55,7 @@ export default function MyAppointments() {
             <div className="flex justify-between items-start mb-4">
               <div>
                 <p className="text-xs text-slate-400 font-bold uppercase mb-1">Profissional</p>
-                {/* Aqui usamos doctor_name (snake_case) */}
-                <h3 className="font-bold text-slate-800 text-lg">{apt.doctor_name || 'Médico'}</h3>
+                <h3 className="font-bold text-slate-800 text-lg">{apt.doctor_name}</h3>
                 <p className="text-sm text-slate-500">{apt.type}</p>
               </div>
               <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${getStatusColor(apt.status)}`}>
@@ -73,22 +73,23 @@ export default function MyAppointments() {
               </div>
             </div>
             
-            {/* Ações */}
+            {/* STATUS PENDENTE */}
             {apt.status === 'pending' && (
               <div className="space-y-3">
                  <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 p-2.5 rounded-xl border border-amber-100">
-                    <AlertCircle size={14} /> Aguardando confirmação.
+                    <AlertCircle size={14} /> Aguardando aprovação médica.
                  </div>
-                 <button onClick={() => handleCancel(apt.id)} disabled={isLoading} className="w-full py-2.5 rounded-xl border border-red-100 text-red-500 font-bold text-sm hover:bg-red-50 transition-colors">
+                 <button onClick={() => handleCancel(apt.id)} disabled={isLoading} className="w-full py-3 rounded-xl border border-red-100 text-red-500 font-bold text-sm hover:bg-red-50 transition-colors">
                     Cancelar Solicitação
                  </button>
               </div>
             )}
 
+            {/* STATUS CONFIRMADO */}
             {apt.status === 'confirmed' && (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 p-2.5 rounded-xl border border-emerald-100">
-                        <CheckCircle size={14} /> Confirmado!
+                        <CheckCircle size={14} /> Agendamento confirmado!
                     </div>
                     <button onClick={() => handleCancel(apt.id)} disabled={isLoading} className="text-xs text-red-400 font-bold hover:text-red-600 self-end px-2">
                         Cancelar Agendamento
@@ -96,7 +97,8 @@ export default function MyAppointments() {
                 </div>
             )}
             
-            {apt.status === 'cancelled' && <div className="text-center text-xs text-slate-400 font-medium pt-2">Agendamento cancelado.</div>}
+            {/* STATUS CANCELADO */}
+            {apt.status === 'cancelled' && <div className="text-center text-xs text-red-400 font-medium pt-2 border-t border-slate-200">Agendamento cancelado.</div>}
 
           </div>
         ))
