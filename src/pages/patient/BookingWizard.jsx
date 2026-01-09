@@ -43,32 +43,39 @@ export default function BookingWizard() {
   const [selectedTime, setSelectedTime] = useState(null);
   const [dates] = useState(getNextDays());
 
-  const isBusy = (time) => {
+  // ... imports
+// Adicione um useEffect para carregar agendamentos existentes para checar ocupação
+const [allAppointments, setAllAppointments] = useState([]);
+
+useEffect(() => {
+    // Carrega agenda para verificar bloqueios
+    appointmentService.getAll().then(data => setAllAppointments(data));
+}, []);
+
+const isBusy = (time) => {
     if (!selectedDoctor || !selectedDay) return false;
-    const allAppointments = appointmentService.getAll();
+    // Usa o estado carregado do Supabase
     return allAppointments.some(apt => 
-      apt.doctorId === selectedDoctor.id && 
+      apt.doctor_id === selectedDoctor.id && // Note: doctor_id (snake_case do banco)
       apt.date === selectedDay.fullDate && 
       apt.time === time
     );
-  };
+};
 
-  const handleFinish = () => {
-    appointmentService.create({
-      patientId: user.id,
-      patientName: user.name,
-      doctorId: selectedDoctor.id,
-      doctorName: selectedDoctor.name,
+const handleFinish = async () => {
+    await appointmentService.create({
+      patient_id: user.id,   // snake_case
+      patient_name: user.name,
+      doctor_id: selectedDoctor.id,
+      doctor_name: selectedDoctor.name,
       date: selectedDay.fullDate,
       time: selectedTime,
       type: 'Consulta'
     });
-    // Simula loading
-    setTimeout(() => {
-        alert('✅ Agendamento Confirmado!');
-        navigate('/portal/meus-agendamentos');
-    }, 500);
-  };
+    
+    alert('✅ Agendamento Confirmado e Salvo na Nuvem!');
+    navigate('/portal/meus-agendamentos');
+};
 
   return (
     <div className="max-w-5xl mx-auto animate-fade-in"> 

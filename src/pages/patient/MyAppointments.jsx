@@ -8,11 +8,13 @@ export default function MyAppointments() {
   const [appointments, setAppointments] = useState([]);
 
   useEffect(() => {
-    if (user) {
-      const myApts = appointmentService.getByPatientId(user.id);
-      setAppointments(myApts);
-    }
-  }, [user]);
+  if (user) {
+    // Agora usamos .then porque é uma Promessa
+    appointmentService.getByPatientId(user.id).then(data => {
+        setAppointments(data);
+    });
+  }
+}, [user]);
 
   const getStatusColor = (status) => {
     return status === 'confirmed' 

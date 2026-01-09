@@ -9,16 +9,15 @@ export default function Appointments() {
   
   // Carrega os dados reais ao abrir a tela
   useEffect(() => {
-    const data = appointmentService.getAll();
-    setAppointments(data);
-  }, []);
+    appointmentService.getAll().then(data => setAppointments(data));
+}, []);
 
   // Simulação de formulário manual (para médico adicionar na hora)
   const [formData, setFormData] = useState({ patient: '', date: '', time: '', type: 'Consulta' });
 
-  const handleSave = (e) => {
+ const handleSave = async (e) => {
     e.preventDefault();
-    const newApt = appointmentService.create({
+    const newApt = await appointmentService.create({
       patientId: 0, // Manual
       patientName: formData.patient,
       doctorId: 1, // Assumindo logado
