@@ -1,12 +1,12 @@
 import { supabase } from './supabaseClient';
 
 export const appointmentService = {
-  // Lista todos os agendamentos
+  // Lista todos os agendamentos (Para o Médico)
   getAll: async () => {
     const { data, error } = await supabase
       .from('appointments')
       .select('*')
-      .order('id', { ascending: false });
+      .order('id', { ascending: false }); // Mais recentes primeiro
     
     if (error) {
       console.error('Erro ao buscar:', error);
@@ -15,7 +15,7 @@ export const appointmentService = {
     return data;
   },
 
-  // Lista agendamentos por ID do paciente
+  // Lista agendamentos por ID do paciente (Para o Paciente)
   getByPatientId: async (patientId) => {
     const { data, error } = await supabase
       .from('appointments')
@@ -36,6 +36,21 @@ export const appointmentService = {
 
     if (error) {
       console.error('Erro ao criar:', error);
+      return null;
+    }
+    return data[0];
+  },
+
+  // --- NOVO: Atualiza o status (Aceitar, Recusar, Cancelar) ---
+  updateStatus: async (id, newStatus) => {
+    const { data, error } = await supabase
+      .from('appointments')
+      .update({ status: newStatus })
+      .eq('id', id)
+      .select();
+
+    if (error) {
+      console.error('Erro ao atualizar:', error);
       return null;
     }
     return data[0];
