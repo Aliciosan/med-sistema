@@ -1,10 +1,11 @@
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, Calendar, Users, FileText, LogOut, Settings } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -16,9 +17,9 @@ export default function Sidebar() {
   return (
     <aside className="hidden md:flex flex-col w-72 bg-white border-r border-slate-100 h-screen sticky top-0">
       <div className="p-8">
-        <div className="flex items-center gap-3 text-primary mb-8">
-          <div className="w-10 h-10 bg-gradient-to-br from-primary to-blue-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/20">M</div>
-          <span className="text-2xl font-bold text-slate-800 tracking-tight">MedConnect</span>
+        <div className="flex items-center gap-2 mb-8">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">M</div>
+            <span className="text-xl font-bold text-slate-800">MedConnect</span>
         </div>
 
         <nav className="space-y-2">
@@ -44,19 +45,25 @@ export default function Sidebar() {
 
       <div className="mt-auto p-6 m-4 bg-slate-50 rounded-3xl border border-slate-100">
         <div className="flex items-center gap-3 mb-4">
-          <img 
-            src={`https://ui-avatars.com/api/?name=${user?.name}&background=0ea5e9&color=fff`} 
-            className="w-10 h-10 rounded-full border-2 border-white shadow-sm"
-          />
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+             {user?.name ? user.name.charAt(0) : 'U'}
+          </div>
           <div className="flex-1 overflow-hidden">
-            <p className="text-sm font-bold text-slate-800 truncate">{user?.name}</p>
-            <p className="text-xs text-slate-500 font-medium">Médico Titular</p>
+            <p className="text-sm font-bold text-slate-800 truncate">{user?.name || 'Usuário'}</p>
+            <p className="text-xs text-slate-500 font-medium capitalize">
+              {user?.role === 'doctor' ? 'Médico Titular' : user?.role === 'admin' ? 'Admin' : 'Paciente'}
+            </p>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <button className="flex items-center justify-center gap-2 py-2 text-xs font-bold text-slate-600 bg-white rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors">
+          {/* BOTÃO CONFIG */}
+          <button 
+            onClick={() => navigate('/configuracoes')} 
+            className="flex items-center justify-center gap-2 py-2 text-xs font-bold text-slate-600 bg-white rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors"
+          >
             <Settings size={14} /> Config
           </button>
+          
           <button onClick={logout} className="flex items-center justify-center gap-2 py-2 text-xs font-bold text-red-500 bg-red-50 rounded-xl border border-red-100 hover:bg-red-100 transition-colors">
             <LogOut size={14} /> Sair
           </button>

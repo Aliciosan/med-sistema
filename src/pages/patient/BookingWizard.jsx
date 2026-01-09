@@ -15,16 +15,22 @@ const TIMES = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '1
 const getNextDays = () => {
   const dates = [];
   const today = new Date();
+  
+  // Força o horário para meio-dia ou zera para evitar viradas de dia indesejadas
+  // Mas a forma mais segura para exibição é manter o objeto limpo:
+  
   const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
   for (let i = 0; i < 14; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
+    const d = new Date(); // Pega data de agora
+    d.setDate(today.getDate() + i); // Soma os dias
+    
     dates.push({ 
       day: d.getDate().toString().padStart(2, '0'), 
       weekDay: weekDays[d.getDay()], 
       month: months[d.getMonth()],
-      fullDate: d.toLocaleDateString('pt-BR') 
+      fullDate: d.toLocaleDateString('pt-BR') // Isso garante o formato local correto
     });
   }
   return dates;
