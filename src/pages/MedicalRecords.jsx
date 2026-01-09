@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, FileText, Calendar, Tag, User } from 'lucide-react';
+import { Search, Plus, FileText, Calendar, Tag, User, Trash2, Edit2 } from 'lucide-react';
 import Modal from '../components/Modal';
 import { recordService } from '../services/recordService';
 
@@ -9,15 +9,15 @@ export default function MedicalRecords() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Formulário
+  // Estados para Edição
+  const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     patient_name: '',
     title: '',
     description: '',
-    tags: '' // Ex: "Gripe, Febre"
+    tags: '' 
   });
 
-  // Carregar dados ao abrir
   const loadRecords = async () => {
     const data = await recordService.getAll();
     setRecords(data);
@@ -27,28 +27,68 @@ export default function MedicalRecords() {
     loadRecords();
   }, []);
 
-  // Salvar novo prontuário
+  // --- AÇÕES ---
+
+  // 1. Abrir Modal para Criar
+  const handleNew = () => {
+    setEditingId(null);
+    setFormData({ patient_name: '', title: '', description: '', tags: '' });
+    setIsModalOpen(true);
+  };
+
+  // 2. Abrir Modal para Editar
+  const handleEdit = (rec) => {
+    setEditingId(rec.id);
+    setFormData({
+      patient_name: rec.patient_name,
+      title: rec.title,
+      description: rec.description,
+      tags: rec.tags
+    });
+    setIsModalOpen(true);
+  };
+
+  // 3. Excluir
+  const handleDelete = async (id) => {
+    if (!window.confirm("Tem certeza que deseja excluir este prontuário?")) return;
+    setIsLoading(true);
+    await recordService.delete(id);
+    await loadRecords();
+    setIsLoading(false);
+  };
+
+  // 4. Salvar (Criar ou Editar)
   const handleSave = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
-    const newRecord = {
-      patient_name: formData.patient_name,
-      title: formData.title,
-      description: formData.description,
-      tags: formData.tags,
-      date: new Date().toLocaleDateString('pt-BR') // Salva a data de hoje
-    };
+    if (editingId) {
+      // ATUALIZAR
+      await recordService.update(editingId, {
+        patient_name: formData.patient_name,
+        title: formData.title,
+        description: formData.description,
+        tags: formData.tags
+        // Não atualizamos a data para manter o histórico original, mas poderia atualizar se quisesse
+      });
+      alert('✅ Prontuário atualizado!');
+    } else {
+      // CRIAR
+      await recordService.create({
+        patient_name: formData.patient_name,
+        title: formData.title,
+        description: formData.description,
+        tags: formData.tags,
+        date: new Date().toLocaleDateString('pt-BR')
+      });
+    }
 
-    await recordService.create(newRecord);
-    await loadRecords(); // Atualiza a lista
-    
+    await loadRecords();
     setIsModalOpen(false);
-    setFormData({ patient_name: '', title: '', description: '', tags: '' });
     setIsLoading(false);
   };
 
-  // Filtragem
+  // Filtro
   const filteredRecords = records.filter(rec => 
     rec.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     rec.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -56,6 +96,7 @@ export default function MedicalRecords() {
 
   return (
     <div className="space-y-6 animate-fade-in pb-20">
+      
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
         <div>
@@ -75,7 +116,7 @@ export default function MedicalRecords() {
             />
           </div>
           <button 
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleNew}
             className="bg-primary text-white px-4 py-2.5 rounded-xl font-bold hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
           >
             <Plus size={20} /> <span className="hidden md:inline">Novo</span>
@@ -83,7 +124,7 @@ export default function MedicalRecords() {
         </div>
       </div>
 
-      {/* Lista de Prontuários */}
+      {/* Lista de Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {filteredRecords.length === 0 ? (
            <div className="col-span-full text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
@@ -94,15 +135,31 @@ export default function MedicalRecords() {
            </div>
         ) : (
           filteredRecords.map((rec) => (
-            <div key={rec.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col h-full">
+            <div key={rec.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col h-full relative">
               
-              <div className="flex justify-between items-start mb-4">
+              {/* Botões de Ação (Aparecem no Hover) */}
+              <div className="absolute top-4 right-4 flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                 <button 
+                    onClick={() => handleEdit(rec)}
+                    className="p-2 bg-white text-blue-500 rounded-lg border border-slate-100 shadow-sm hover:bg-blue-50"
+                 >
+                    <Edit2 size={16} />
+                 </button>
+                 <button 
+                    onClick={() => handleDelete(rec.id)}
+                    className="p-2 bg-white text-red-500 rounded-lg border border-slate-100 shadow-sm hover:bg-red-50"
+                 >
+                    <Trash2 size={16} />
+                 </button>
+              </div>
+
+              <div className="flex justify-between items-start mb-4 pr-20"> {/* pr-20 para dar espaço aos botões */}
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
                     <User size={18} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-800">{rec.patient_name}</h3>
+                    <h3 className="font-bold text-slate-800 line-clamp-1">{rec.patient_name}</h3>
                     <p className="text-xs text-slate-400 flex items-center gap-1">
                       <Calendar size={12}/> {rec.date}
                     </p>
@@ -117,7 +174,6 @@ export default function MedicalRecords() {
                 </p>
               </div>
 
-              {/* Tags */}
               <div className="mt-4 pt-4 border-t border-slate-50 flex flex-wrap gap-2">
                 {rec.tags && rec.tags.split(',').map((tag, i) => (
                   <span key={i} className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-md flex items-center gap-1">
@@ -131,8 +187,8 @@ export default function MedicalRecords() {
         )}
       </div>
 
-      {/* Modal Novo Prontuário */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Novo Prontuário">
+      {/* Modal */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? "Editar Prontuário" : "Novo Prontuário"}>
         <form onSubmit={handleSave} className="space-y-4">
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-1">Nome do Paciente</label>
@@ -152,7 +208,7 @@ export default function MedicalRecords() {
               required 
               type="text" 
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20"
-              placeholder="Ex: Consulta de Rotina, Febre Alta..."
+              placeholder="Ex: Consulta de Rotina"
               value={formData.title}
               onChange={e => setFormData({...formData, title: e.target.value})}
             />
@@ -164,7 +220,7 @@ export default function MedicalRecords() {
               required 
               rows="4"
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-              placeholder="Descreva os sintomas, diagnóstico e prescrições..."
+              placeholder="Descreva o atendimento..."
               value={formData.description}
               onChange={e => setFormData({...formData, description: e.target.value})}
             ></textarea>
@@ -175,7 +231,7 @@ export default function MedicalRecords() {
             <input 
               type="text" 
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/20"
-              placeholder="Ex: Gripe, Retorno, Exames"
+              placeholder="Ex: Gripe, Retorno"
               value={formData.tags}
               onChange={e => setFormData({...formData, tags: e.target.value})}
             />
@@ -186,7 +242,7 @@ export default function MedicalRecords() {
             disabled={isLoading}
             className="w-full bg-primary text-white font-bold py-3.5 rounded-xl mt-4 hover:bg-primary-dark transition-all shadow-lg shadow-primary/20"
           >
-            {isLoading ? 'Salvando...' : 'Salvar Prontuário'}
+            {isLoading ? 'Salvando...' : (editingId ? 'Salvar Alterações' : 'Criar Prontuário')}
           </button>
         </form>
       </Modal>
