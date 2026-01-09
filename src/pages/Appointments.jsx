@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Clock, CheckCircle, XCircle, Filter, Plus, AlertCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, CheckCircle, XCircle, Filter, Plus } from 'lucide-react';
 import Modal from '../components/Modal'; 
 import { appointmentService } from '../services/appointmentService';
 
@@ -8,7 +8,7 @@ export default function Appointments() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Função para carregar dados
+  // Carrega dados iniciais
   const fetchAppointments = async () => {
     const data = await appointmentService.getAll();
     setAppointments(data);
@@ -18,11 +18,10 @@ export default function Appointments() {
     fetchAppointments();
   }, []);
 
-  // --- LÓGICA DOS BOTÕES ---
   const handleStatusChange = async (id, newStatus) => {
     setIsLoading(true);
     await appointmentService.updateStatus(id, newStatus);
-    await fetchAppointments(); // Recarrega a lista
+    await fetchAppointments();
     setIsLoading(false);
   };
 
@@ -31,19 +30,28 @@ export default function Appointments() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    await appointmentService.create({
+    setIsLoading(true);
+    
+    // Cria no banco
+    const newApt = await appointmentService.create({
       patient_id: 0,
-      patient_name: formData.patient,
-      doctor_id: 1, // Assumindo logado
+      patient_name: formData.patient, // Usando snake_case para o Supabase
+      doctor_id: 1,
       doctor_name: 'Você',
       date: new Date(formData.date).toLocaleDateString('pt-BR'),
       time: formData.time,
       type: formData.type,
-      status: 'confirmed' // Médico criando já nasce confirmado
+      status: 'confirmed'
     });
-    await fetchAppointments();
-    setIsModalOpen(false);
-    setFormData({ patient: '', date: '', time: '', type: 'Consulta' });
+
+    if (newApt) {
+      setAppointments([newApt, ...appointments]);
+      setIsModalOpen(false);
+      setFormData({ patient: '', date: '', time: '', type: 'Consulta' });
+    } else {
+      alert("Erro ao salvar. Verifique sua conexão.");
+    }
+    setIsLoading(false);
   };
 
   const getStatusStyle = (status) => {
@@ -87,7 +95,7 @@ export default function Appointments() {
                   {apt.patient_name ? apt.patient_name.charAt(0) : '?'}
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800">{apt.patient_name}</h3>
+                  <h3 className="font-bold text-slate-800">{apt.patient_name || 'Paciente'}</h3>
                   <p className="text-xs text-slate-500">{apt.type}</p>
                 </div>
               </div>
@@ -106,7 +114,7 @@ export default function Appointments() {
                 </div>
             </div>
 
-            {/* BOTÕES DE AÇÃO (Só aparecem se estiver Pendente) */}
+            {/* BOTÕES DE AÇÃO */}
             {apt.status === 'pending' && (
               <div className="flex gap-2">
                  <button 
@@ -125,48 +133,40 @@ export default function Appointments() {
                  </button>
               </div>
             )}
-
-            {apt.status === 'confirmed' && (
-                <div className="mt-2 text-center text-xs font-bold text-emerald-600 bg-emerald-50 py-2 rounded-xl flex items-center justify-center gap-2">
-                    <CheckCircle size={14} /> Consulta Confirmada
-                </div>
-            )}
-
-             {apt.status === 'cancelled' && (
-                <div className="mt-2 text-center text-xs font-bold text-red-500 bg-red-50 py-2 rounded-xl">
-                    Cancelado
-                </div>
-            )}
+            
+            {/* Status Estático */}
+            {apt.status === 'confirmed' && <div className="mt-2 text-center text-xs font-bold text-emerald-600 bg-emerald-50 py-2 rounded-xl">Consulta Confirmada</div>}
+            {apt.status === 'cancelled' && <div className="mt-2 text-center text-xs font-bold text-red-500 bg-red-50 py-2 rounded-xl">Cancelado</div>}
 
           </div>
         ))}
       </div>
 
+      {/* MODAL MANUAL */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Agendamento Manual">
         <form onSubmit={handleSave} className="space-y-4">
-            {/* ... (Formulário igual ao anterior) ... */}
-            <div>
+          <div>
             <label className="block text-sm font-bold text-slate-700 mb-1">Nome do Paciente</label>
-            <input required type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/50"
-              placeholder="Ex: João da Silva" value={formData.patient} onChange={e => setFormData({...formData, patient: e.target.value})}
+            <input required type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none"
+              value={formData.patient} onChange={e => setFormData({...formData, patient: e.target.value})}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1">Data</label>
-              <input required type="date" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/50"
+              <input required type="date" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none"
                 value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})}
               />
             </div>
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1">Horário</label>
-              <input required type="time" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/50"
+              <input required type="time" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none"
                 value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})}
               />
             </div>
           </div>
-          <button type="submit" className="w-full bg-primary text-white font-bold py-3.5 rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all mt-4">
-            Salvar Confirmado
+          <button disabled={isLoading} type="submit" className="w-full bg-primary text-white font-bold py-3.5 rounded-xl mt-4">
+            {isLoading ? 'Salvando...' : 'Salvar'}
           </button>
         </form>
       </Modal>

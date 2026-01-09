@@ -19,8 +19,7 @@ export default function MyAppointments() {
   }, [user]);
 
   const handleCancel = async (id) => {
-    if(!window.confirm("Tem certeza que deseja cancelar este agendamento?")) return;
-
+    if(!window.confirm("Tem certeza que deseja cancelar?")) return;
     setIsLoading(true);
     await appointmentService.updateStatus(id, 'cancelled');
     loadData();
@@ -55,7 +54,8 @@ export default function MyAppointments() {
             <div className="flex justify-between items-start mb-4">
               <div>
                 <p className="text-xs text-slate-400 font-bold uppercase mb-1">Profissional</p>
-                <h3 className="font-bold text-slate-800 text-lg">{apt.doctor_name}</h3>
+                {/* Aqui usamos doctor_name (snake_case) */}
+                <h3 className="font-bold text-slate-800 text-lg">{apt.doctor_name || 'Médico'}</h3>
                 <p className="text-sm text-slate-500">{apt.type}</p>
               </div>
               <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${getStatusColor(apt.status)}`}>
@@ -73,17 +73,13 @@ export default function MyAppointments() {
               </div>
             </div>
             
-            {/* Avisos e Ações */}
+            {/* Ações */}
             {apt.status === 'pending' && (
               <div className="space-y-3">
                  <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 p-2.5 rounded-xl border border-amber-100">
-                    <AlertCircle size={14} /> Aguardando confirmação da clínica.
+                    <AlertCircle size={14} /> Aguardando confirmação.
                  </div>
-                 <button 
-                    onClick={() => handleCancel(apt.id)}
-                    disabled={isLoading}
-                    className="w-full py-2.5 rounded-xl border border-red-100 text-red-500 font-bold text-sm hover:bg-red-50 transition-colors"
-                 >
+                 <button onClick={() => handleCancel(apt.id)} disabled={isLoading} className="w-full py-2.5 rounded-xl border border-red-100 text-red-500 font-bold text-sm hover:bg-red-50 transition-colors">
                     Cancelar Solicitação
                  </button>
               </div>
@@ -92,23 +88,15 @@ export default function MyAppointments() {
             {apt.status === 'confirmed' && (
                 <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 p-2.5 rounded-xl border border-emerald-100">
-                        <CheckCircle size={14} /> Sua consulta está confirmada!
+                        <CheckCircle size={14} /> Confirmado!
                     </div>
-                    <button 
-                        onClick={() => handleCancel(apt.id)}
-                        disabled={isLoading}
-                        className="text-xs text-red-400 font-bold hover:text-red-600 self-end px-2"
-                    >
+                    <button onClick={() => handleCancel(apt.id)} disabled={isLoading} className="text-xs text-red-400 font-bold hover:text-red-600 self-end px-2">
                         Cancelar Agendamento
                     </button>
                 </div>
             )}
-
-            {apt.status === 'cancelled' && (
-                 <div className="text-center text-xs text-slate-400 font-medium border-t border-slate-100 pt-2">
-                    Este agendamento foi cancelado.
-                 </div>
-            )}
+            
+            {apt.status === 'cancelled' && <div className="text-center text-xs text-slate-400 font-medium pt-2">Agendamento cancelado.</div>}
 
           </div>
         ))

@@ -1,58 +1,69 @@
 import { supabase } from './supabaseClient';
 
 export const appointmentService = {
-  // Lista todos os agendamentos (Para o Médico)
+  // Lista todos os agendamentos
   getAll: async () => {
-    const { data, error } = await supabase
-      .from('appointments')
-      .select('*')
-      .order('id', { ascending: false }); // Mais recentes primeiro
-    
-    if (error) {
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .order('id', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
       console.error('Erro ao buscar:', error);
+      return []; // Retorna array vazio para não quebrar a tela
+    }
+  },
+
+  // Lista por Paciente
+  getByPatientId: async (patientId) => {
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('patient_id', patientId)
+        .order('id', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar por paciente:', error);
       return [];
     }
-    return data;
   },
 
-  // Lista agendamentos por ID do paciente (Para o Paciente)
-  getByPatientId: async (patientId) => {
-    const { data, error } = await supabase
-      .from('appointments')
-      .select('*')
-      .eq('patient_id', patientId)
-      .order('id', { ascending: false });
-
-    if (error) return [];
-    return data;
-  },
-
-  // Cria um novo agendamento
+  // Criação
   create: async (appointment) => {
-    const { data, error } = await supabase
-      .from('appointments')
-      .insert([appointment])
-      .select();
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .insert([appointment])
+        .select();
 
-    if (error) {
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
       console.error('Erro ao criar:', error);
       return null;
     }
-    return data[0];
   },
 
-  // --- NOVO: Atualiza o status (Aceitar, Recusar, Cancelar) ---
+  // Atualização de Status
   updateStatus: async (id, newStatus) => {
-    const { data, error } = await supabase
-      .from('appointments')
-      .update({ status: newStatus })
-      .eq('id', id)
-      .select();
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .update({ status: newStatus })
+        .eq('id', id)
+        .select();
 
-    if (error) {
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
       console.error('Erro ao atualizar:', error);
       return null;
     }
-    return data[0];
   }
 };

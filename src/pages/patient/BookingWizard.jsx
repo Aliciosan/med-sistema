@@ -1,17 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, ChevronLeft, MapPin, Calendar, Clock, User, ShieldCheck } from 'lucide-react';
+import { Check, ChevronLeft, MapPin, Calendar, Clock, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { appointmentService } from '../../services/appointmentService';
 
-// --- DADOS ---
+// --- DADOS ESTÁTICOS ---
 const DOCTORS = [
   { id: 1, name: 'Dra. Ana Silva', specialty: 'Cardiologista', image: 'https://i.pravatar.cc/150?u=1', price: 'R$ 350,00' },
   { id: 2, name: 'Dr. Carlos Lima', specialty: 'Clínico Geral', image: 'https://i.pravatar.cc/150?u=2', price: 'R$ 200,00' },
   { id: 3, name: 'Dra. Júlia Costa', specialty: 'Dermatologista', image: 'https://i.pravatar.cc/150?u=4', price: 'R$ 280,00' },
 ];
 
-// Gera 14 dias com tratamento de mês
+const TIMES = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'];
+
+// Função para gerar os próximos 14 dias
 const getNextDays = () => {
   const dates = [];
   const today = new Date();
@@ -31,54 +33,69 @@ const getNextDays = () => {
   return dates;
 };
 
-const TIMES = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'];
-
 export default function BookingWizard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   
+  // Estados do Wizard
   const [step, setStep] = useState(1);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [selectedDay, setSelectedDay] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
   const [dates] = useState(getNextDays());
+  
+  // Estado para verificar ocupação
+  const [allAppointments, setAllAppointments] = useState([]);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // ... imports
-// Adicione um useEffect para carregar agendamentos existentes para checar ocupação
-const [allAppointments, setAllAppointments] = useState([]);
-
-useEffect(() => {
-    // Carrega agenda para verificar bloqueios
+  // 1. Carregar agendamentos existentes para bloquear horários
+  useEffect(() => {
     appointmentService.getAll().then(data => setAllAppointments(data));
-}, []);
+  }, []);
 
-const isBusy = (time) => {
+  // 2. Verifica se o horário está ocupado
+  const isBusy = (time) => {
     if (!selectedDoctor || !selectedDay) return false;
-    // Usa o estado carregado do Supabase
+    
+    // Verifica na lista carregada do Supabase
     return allAppointments.some(apt => 
-      apt.doctor_id === selectedDoctor.id && // Note: doctor_id (snake_case do banco)
+      apt.doctor_id === selectedDoctor.id && 
       apt.date === selectedDay.fullDate && 
-      apt.time === time
+      apt.time === time &&
+      apt.status !== 'cancelled' // Se foi cancelado, libera o horário
     );
-};
+  };
 
-const handleFinish = async () => {
-    await appointmentService.create({
-      patient_id: user.id,   // snake_case
-      patient_name: user.name,
-      doctor_id: selectedDoctor.id,
-      doctor_name: selectedDoctor.name,
+  // 3. Salva no Supabase (CORREÇÃO DE SNAKE_CASE AQUI)
+  const handleFinish = async () => {
+    if (!selectedDoctor || !selectedDay || !selectedTime) return;
+
+    setIsSaving(true);
+
+    const newAppointment = {
+      patient_id: user.id,          // snake_case
+      patient_name: user.name,      // snake_case
+      doctor_id: selectedDoctor.id, // snake_case
+      doctor_name: selectedDoctor.name, // snake_case
       date: selectedDay.fullDate,
       time: selectedTime,
-      type: 'Consulta'
-    });
-    
-    alert('✅ Agendamento Confirmado e Salvo na Nuvem!');
-    navigate('/portal/meus-agendamentos');
-};
+      type: 'Consulta',
+      status: 'pending'
+    };
+
+    const result = await appointmentService.create(newAppointment);
+
+    if (result) {
+      alert('✅ Agendamento Confirmado!');
+      navigate('/portal/meus-agendamentos');
+    } else {
+      alert('❌ Erro ao agendar. Tente novamente.');
+      setIsSaving(false);
+    }
+  };
 
   return (
-    <div className="max-w-5xl mx-auto animate-fade-in"> 
+    <div className="max-w-5xl mx-auto animate-fade-in pb-20"> 
       
       {/* --- HEADER DO WIZARD --- */}
       <div className="mb-8">
@@ -198,7 +215,7 @@ const handleFinish = async () => {
             {/* COLUNA DIREITA: RESUMO (FIXO NO DESKTOP, MODAL NO MOBILE) */}
             <div className="lg:w-96">
                 <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-lg lg:sticky lg:top-24">
-                    <h3 className="font-bold text-slate-800 mb-6 pb-4 border-b border-slate-100">Resumo do Agendamento</h3>
+                    <h3 className="font-bold text-slate-800 mb-6 pb-4 border-b border-slate-100">Resumo</h3>
                     
                     {/* Médico */}
                     <div className="flex items-center gap-4 mb-6">
@@ -229,30 +246,25 @@ const handleFinish = async () => {
 
                     {/* Botão de Confirmação Desktop */}
                     <button
-                        disabled={!selectedTime}
+                        disabled={!selectedTime || isSaving}
                         onClick={handleFinish}
                         className="w-full bg-primary text-white py-4 rounded-xl font-bold shadow-xl shadow-primary/20 hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center justify-center gap-2"
                     >
-                        <ShieldCheck size={20} /> Confirmar Agendamento
+                        {isSaving ? 'Agendando...' : <><ShieldCheck size={20} /> Confirmar</>}
                     </button>
-                    
-                    <p className="text-center text-[10px] text-slate-400 mt-4">
-                        Ao confirmar, você concorda com os termos de cancelamento da clínica.
-                    </p>
                 </div>
             </div>
 
             {/* Botão Fixo Mobile (Só aparece no celular) */}
             <div className={`fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 lg:hidden transition-transform duration-300 z-50 ${selectedTime ? 'translate-y-0' : 'translate-y-full'}`}>
                 <button
+                    disabled={isSaving}
                     onClick={handleFinish}
                     className="w-full bg-primary text-white py-4 rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2"
                 >
-                    Confirmar ({selectedTime})
+                    {isSaving ? 'Agendando...' : `Confirmar (${selectedTime})`}
                 </button>
             </div>
-            {/* Espaçador Mobile */}
-            <div className="h-24 lg:hidden"></div>
 
         </div>
       )}
